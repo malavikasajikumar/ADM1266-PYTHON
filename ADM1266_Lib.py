@@ -575,7 +575,7 @@ ADM1266_Address = list()
 Summary_Data = [0 for k in range(6)]
 Record_Index = 0
 Num_Records = 0
-
+Num_Signals = 29
 
 # function to dynamically initialize nested lists to store system and blackbox data
 def Init_Lists():
@@ -596,7 +596,7 @@ def Init_Lists():
     # i - dev_id, k - BB data
 
     global Signals_Data
-    Signals_Data = [[[0 for k in range(7)] for j in range(26)] for i in range(len(Address))]
+    Signals_Data = [[[0 for k in range(7)] for j in range(Num_Signals+1)] for i in range(len(Address))]
 
 
 # i - dev_id, j - PDIO16+GPIO9, k - Name, PDIO_num, PDIOGPIOType, Direction, Input BB Status, Output BB Status, PDIO Inst Status
@@ -719,6 +719,7 @@ def BB_Parse():
         VP_BB_Data(BB_Data[i][11:15], i)
         PDIO_Rail_BB_Data(BB_Data[i][21:23], i)
         PDIO_Signal_BB_Input_Data(BB_Data[i][19:21], i)
+        PDIO_Signal_BB_Output_Data(BB_Data[i][21:23], i)
         GPIO_Signal_BB_Input_Data(BB_Data[i][15:17], i)
         GPIO_Signal_BB_Output_Data(BB_Data[i][17:19], i)
 
@@ -779,7 +780,7 @@ def PDIO_Rail_BB_Data(data, device):
                 if (VP_Data[j][k][1] == i + 1 and VP_Data[j][k][2] == device):
                     VP_Data[j][k][6] = temp[i]
 
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[device][n][2] == 1 and Signals_Data[device][n][1] == i + 1:
                 Signals_Data[device][n][5] = temp[i]
 
@@ -788,9 +789,17 @@ def PDIO_Signal_BB_Input_Data(data, device):
     temp = [int(x) for x in bin(data[0] + (256 * data[1]))[2:].zfill(16)]
     temp.reverse()
     for i in range(0, 16, 1):
-        for n in range(0, 25, 1):
-            if Signals_Data[device][n][2] == 1 and Signals_Data[device][n][1] == i + 1:
+        for n in range(0, Num_Signals, 1):
+            if Signals_Data[device][n][2] == 0 and Signals_Data[device][n][1] == i + 1:
                 Signals_Data[device][n][4] = temp[i]
+
+def PDIO_Signal_BB_Output_Data(data, device):
+    temp = [int(x) for x in bin(data[0] + (256 * data[1]))[2:].zfill(16)]
+    temp.reverse()
+    for i in range(0, 16, 1):
+        for n in range(0, Num_Signals, 1):
+            if Signals_Data[device][n][2] == 0 and Signals_Data[device][n][1] == i + 1:
+                Signals_Data[device][n][5] = temp[i]
 
 
 def GPIO_map(data):
@@ -811,7 +820,7 @@ def GPIO_Signal_BB_Input_Data(data, device):
     temp.reverse()
     temp = GPIO_map(temp)
     for i in range(0, 10, 1):
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[device][n][2] == 1 and Signals_Data[device][n][1] == i + 1:
                 Signals_Data[device][n][4] = temp[i]
 
@@ -821,7 +830,7 @@ def GPIO_Signal_BB_Output_Data(data, device):
     temp.reverse()
     temp = GPIO_map(temp)
     for i in range(0, 10, 1):
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[device][n][2] == 1 and Signals_Data[device][n][1] == i + 1:
                 Signals_Data[device][n][5] = temp[i]
 
@@ -829,7 +838,7 @@ def GPIO_Signal_BB_Output_Data(data, device):
 def Signals_Status_Fill():
     del Signals_Status[:]
     for i in range(len(ADM1266_Address)):
-        for j in range(0, 25, 1):
+        for j in range(0, Num_Signals, 1):
             if Signals_Data[i][j][0] != 0:
                 if Signals_Data[i][j][4] == 1:
                     i_val = "High"
@@ -1064,7 +1073,7 @@ def PDIO_Rail_Inst_Data(data, device):
                 if (VP_Data[j][k][1] == i + 1 and VP_Data[j][k][2] == device):
                     VP_Data[j][k][14] = temp[i]
 
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[device][n][2] == 0 and Signals_Data[device][n][1] == i + 1:
                 Signals_Data[device][n][6] = temp[i]
 
@@ -1074,7 +1083,7 @@ def GPIO_Signal_Inst_Data(data, device):
     temp.reverse()
     temp = GPIO_map(temp)
     for i in range(0, 10, 1):
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[device][n][2] == 1 and Signals_Data[device][n][1] == i + 1:
                 Signals_Data[device][n][6] = temp[i]
 
@@ -1133,7 +1142,7 @@ def Get_Signal_Current_Data(address, index):
         read_data = PMBus_I2C.PMBus_Write_Read(ADM1266_Address[address], write_data, 3)
         PDIO_Rail_Inst_Data(read_data, address)
         index = index + 1
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[address][n][2] == 0 and Signals_Data[address][n][1] == (index) and Signals_Data[address][n][
                 0] != 0:
                 status = Signals_Data[address][n][6]
@@ -1147,7 +1156,7 @@ def Get_Signal_Current_Data(address, index):
         read_data = PMBus_I2C.PMBus_Write_Read(ADM1266_Address[address], write_data, 3)
         GPIO_Signal_Inst_Data(read_data, address)
         index = index - 15
-        for n in range(0, 25, 1):
+        for n in range(0, Num_Signals, 1):
             if Signals_Data[address][n][2] == 1 and Signals_Data[address][n][1] == (index) and Signals_Data[address][n][
                 0] != 0:
                 status = Signals_Data[address][n][6]
@@ -1327,7 +1336,7 @@ def Rails_I_Status():
 def Signals_I_Status_Fill():
     del Signals_I_Status[:]
     for i in range(len(ADM1266_Address)):
-        for j in range(0, 25, 1):
+        for j in range(0, Num_Signals, 1):
             if Signals_Data[i][j][0] != 0:
                 if Signals_Data[i][j][6] == 1:
                     i_val = "High"
